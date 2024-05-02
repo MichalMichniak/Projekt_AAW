@@ -529,16 +529,6 @@ int Skeletonization::runCLKernels()
         std::vector<cl::Event> wait1{ndrEvt1};
         status = commandQueue.enqueueBarrierWithWaitList(const_cast<std::vector<cl::Event>*>(&wait1));
         CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueBarrierWithWaitList failed.");
-
-        eventStatus = CL_QUEUED;
-        while(eventStatus != CL_COMPLETE)
-        {
-            status = ndrEvt1.getInfo<cl_int>(
-                        CL_EVENT_COMMAND_EXECUTION_STATUS,
-                        &eventStatus);
-            CHECK_OPENCL_ERROR(status,
-                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
-        }
         
         cl::Event ndrEvt2;
         status = commandQueue.enqueueNDRangeKernel(
@@ -556,72 +546,6 @@ int Skeletonization::runCLKernels()
         std::vector<cl::Event> wait2{ndrEvt2};
         status = commandQueue.enqueueBarrierWithWaitList(const_cast<std::vector<cl::Event>*>(&wait2));
         CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueBarrierWithWaitList failed.");
-
-        eventStatus = CL_QUEUED;
-        while(eventStatus != CL_COMPLETE)
-        {
-            status = ndrEvt2.getInfo<cl_int>(
-                        CL_EVENT_COMMAND_EXECUTION_STATUS,
-                        &eventStatus);
-            CHECK_OPENCL_ERROR(status,
-                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
-        }
-        
-        cl::Event ndrEvt3;
-        status = commandQueue.enqueueNDRangeKernel(
-                    kernel3,
-                    cl::NullRange,
-                    globalThreads,
-                    localThreads,
-                    0,
-                    &ndrEvt3);
-        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueNDRangeKernel() failed.");
-
-        status = commandQueue.flush();
-        CHECK_OPENCL_ERROR(status, "cl::CommandQueue.flush failed.");
-
-        std::vector<cl::Event> wait3{ndrEvt3};
-        status = commandQueue.enqueueBarrierWithWaitList(const_cast<std::vector<cl::Event>*>(&wait3));
-        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueBarrierWithWaitList failed.");
-        
-        eventStatus = CL_QUEUED;
-        while(eventStatus != CL_COMPLETE)
-        {
-            status = ndrEvt3.getInfo<cl_int>(
-                        CL_EVENT_COMMAND_EXECUTION_STATUS,
-                        &eventStatus);
-            CHECK_OPENCL_ERROR(status,
-                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
-        }
-        
-        cl::Event ndrEvt4;
-        status = commandQueue.enqueueNDRangeKernel(
-                    kernel4,
-                    cl::NullRange,
-                    globalThreads,
-                    localThreads,
-                    0,
-                    &ndrEvt4);
-        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueNDRangeKernel() failed.");
-
-        status = commandQueue.flush();
-        CHECK_OPENCL_ERROR(status, "cl::CommandQueue.flush failed.");
-
-        // std::vector<cl::Event> wait4{ndrEvt4};
-        // status = commandQueue.enqueueBarrierWithWaitList(const_cast<std::vector<cl::Event>*>(&wait4));
-        // CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueBarrierWithWaitList failed.");
-
-        eventStatus = CL_QUEUED;
-        while(eventStatus != CL_COMPLETE)
-        {
-            status = ndrEvt4.getInfo<cl_int>(
-                        CL_EVENT_COMMAND_EXECUTION_STATUS,
-                        &eventStatus);
-            CHECK_OPENCL_ERROR(status,
-                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
-        }
-        
-        
     }
     cl::Event ndrEvt_check;
     status = commandQueue.enqueueNDRangeKernel(
