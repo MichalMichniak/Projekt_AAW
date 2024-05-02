@@ -214,6 +214,23 @@ int Skeletonization::setupCL()
                                 &err);
     CHECK_OPENCL_ERROR(err, "Image2D::Image2D() failed. (outputImage2D)");
 
+    // Create memory objects for ref Image
+    refImage2D = cl::Image2D(context,
+                                CL_MEM_READ_WRITE,
+                                cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT8),
+                                width,
+                                height,
+                                0,
+                                0,
+                                &err);
+    CHECK_OPENCL_ERROR(err, "Image2D::Image2D() failed. (outputImage2D)");
+    
+    flag = (int*) malloc(sizeof(int));
+    *flag = 0;
+    flag_buf = cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(int), flag, &err);
+    CHECK_OPENCL_ERROR(err, "cl::Buffer() failed. (flag_buf)");
+
+
     device.push_back(devices[sampleArgs->deviceId]);
 
     // create a CL program using the kernel source
@@ -489,7 +506,10 @@ int Skeletonization::runCLKernels()
     CHECK_OPENCL_ERROR(status, "Kernel::setArg() failed. (inputImageBuffer)");
 
     // outBuffer imager
-    status = kernel3.setArg(1, outputImage2D);
+    status = kernel3.setArg(1, refImage2D);
+    CHECK_OPENCL_ERROR(status, "Kernel::setArg() failed. (outputImageBuffer)");
+
+    status = kernel3.setArg(2, flag_buf);
     CHECK_OPENCL_ERROR(status, "Kernel::setArg() failed. (outputImageBuffer)");
 
     status = kernel4.setArg(0, inputImage2D);
@@ -509,10 +529,11 @@ int Skeletonization::runCLKernels()
     /*
     * Enqueue a kernel run call.
     */
+   bool run = true;
    printf("(%d, %d)", width, height);
     cl::NDRange globalThreads(width, height);
     cl::NDRange localThreads(blockSizeX, blockSizeY);
-    for(int i = 0; i <1200; i++){
+    while(run){
         cl::Event ndrEvt1;
         status = commandQueue.enqueueNDRangeKernel(
                     kernel1,
@@ -546,6 +567,59 @@ int Skeletonization::runCLKernels()
         std::vector<cl::Event> wait2{ndrEvt2};
         status = commandQueue.enqueueBarrierWithWaitList(const_cast<std::vector<cl::Event>*>(&wait2));
         CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueBarrierWithWaitList failed.");
+
+        cl::Event ndrEvt3;
+        status = commandQueue.enqueueNDRangeKernel(
+                    kernel3,
+                    cl::NullRange,
+                    globalThreads,
+                    localThreads,
+                    0,
+                    &ndrEvt3);
+        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueNDRangeKernel() failed.");
+
+        status = commandQueue.flush();
+        CHECK_OPENCL_ERROR(status, "cl::CommandQueue.flush failed.");
+
+        std::vector<cl::Event> wait3{ndrEvt3};
+        status = commandQueue.enqueueBarrierWithWaitList(const_cast<std::vector<cl::Event>*>(&wait3));
+        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueBarrierWithWaitList failed.");
+        eventStatus = CL_QUEUED;
+        while(eventStatus != CL_COMPLETE)
+        {
+            status = ndrEvt3.getInfo<cl_int>(
+                        CL_EVENT_COMMAND_EXECUTION_STATUS,
+                        &eventStatus);
+            CHECK_OPENCL_ERROR(status,
+                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
+        }
+        cl::Event ndrEvt4;
+        cl_int result;
+        int* temp = (int*) malloc(sizeof(int));
+        status = commandQueue.enqueueReadBuffer(flag_buf, CL_FALSE, 0, sizeof(cl_int), temp, NULL, &ndrEvt4);
+        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueReadBuffer failed.");
+        while(eventStatus != CL_COMPLETE)
+        {
+            status = ndrEvt4.getInfo<cl_int>(
+                        CL_EVENT_COMMAND_EXECUTION_STATUS,
+                        &eventStatus);
+            CHECK_OPENCL_ERROR(status,
+                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
+        }
+        
+        run = (bool)(*temp);
+        *temp = 0;
+        status = commandQueue.enqueueWriteBuffer(flag_buf, CL_FALSE, 0, sizeof(cl_int), temp, NULL, &ndrEvt4);
+        CHECK_OPENCL_ERROR(status, "CommandQueue::enqueueReadBuffer failed.");
+        while(eventStatus != CL_COMPLETE)
+        {
+            status = ndrEvt4.getInfo<cl_int>(
+                        CL_EVENT_COMMAND_EXECUTION_STATUS,
+                        &eventStatus);
+            CHECK_OPENCL_ERROR(status,
+                            "cl:Event.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS) failed.");
+        }
+        FREE(temp);
     }
     cl::Event ndrEvt_check;
     status = commandQueue.enqueueNDRangeKernel(
@@ -720,7 +794,7 @@ int Skeletonization::cleanup()
     FREE(inputImageData);
     FREE(outputImageData);
     FREE(verificationOutput);
-
+    FREE(flag);
     return SDK_SUCCESS;
 }
 

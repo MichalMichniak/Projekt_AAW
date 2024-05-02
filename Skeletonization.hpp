@@ -31,6 +31,7 @@ class Skeletonization{
     std::vector<cl::Platform> platforms;            /**< list of platforms */
     cl::Image2D inputImage2D;                       /**< CL Input image2d */
     cl::Image2D outputImage2D;                      /**< CL Output image2d */
+    cl::Image2D refImage2D;                      /**< CL Output image2d */
     cl::CommandQueue commandQueue;                  /**< CL command queue */
     cl::Program program;                            /**< CL program  */
     cl::Kernel kernel1;                              /**< CL kernel */
@@ -38,9 +39,9 @@ class Skeletonization{
     cl::Kernel kernel3;                              /**< CL kernel */
     cl::Kernel kernel4;                              /**< CL kernel */
     cl::Kernel kernel_check;                              /**< CL kernel */
+    cl::Buffer flag_buf;
 
-
-
+    int* flag;
 
     cl_uchar* verificationOutput;       /**< Output array for reference implementation */
 
@@ -59,7 +60,7 @@ class Skeletonization{
     size_t blockSizeY;                  /**< Work-group size in y-direction */
     int iterations;                     /**< Number of iterations for kernel execution */
     int imageSupport;
-
+    
     SDKTimer    *sampleTimer;      /**< SDKTimer object */
 public:
 
