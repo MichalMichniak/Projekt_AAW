@@ -1,0 +1,9 @@
+.vscode/
+CMakeFiles/
+Makefile
+bin/
+build/
+cmake_install.cmake
+CMakeCache.txt
+Skeletonization_Input.bmp
+Skeletonization_Input3.bmp
