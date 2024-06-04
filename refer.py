@@ -7,10 +7,8 @@ Zhang-Suen Thinning Algorithm for skeletonization.
 ===========================
 """
 import cv2
-import skimage.io as io
-import os
 
-BW_Original =  io.imread(r"E:\studia\AAW\2DImages\small_refer_images\anim0.bmp")      # Gray image, rgb images need pre-conversion
+BW_Original =  cv2.imread(r"E:\studia\AAW\2DImages\small_refer_images\anim0.bmp")      # Gray image, rgb images need pre-conversion
 
 def neighbours(x,y,image):
     "Return 8-neighbours of image point P1(x,y), in a clockwise order"
@@ -59,3 +57,4 @@ def zhangSuen(image):
     return Image_Thinned
 
 BW_Skeleton = zhangSuen(BW_Original)
+cv2.imwrite(r"E:/studia/AAW/2DImages/small_refer_images_refer_skel/anim0.bmp", BW_Skeleton*255)
